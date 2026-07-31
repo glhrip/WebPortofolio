@@ -3,32 +3,39 @@ import { motion } from 'framer-motion';
 
 const projects = [
     {
-        title: "Sistem Manajemen Biro Perjalanan Haji",
-        description: "Aplikasi full-stack web untuk manajemen administrasi dan operasional biro perjalanan.",
+        title: "Hajj & Umrah Travel Management System",
+        description: "Merancang arsitektur full-stack terpisah (Decoupled SPA & PWA) dengan pelacakan pembayaran, manajemen jemaah, dan RBAC.",
         icon: "fas fa-plane-departure",
         color: "orange",
-        tags: ["React.js", "Laravel"]
+        tags: ["React 19 & Vite", "Laravel REST API", "TanStack Query", "TailwindCSS"]
     },
     {
-        title: "Sistem POS Cuci Kendaraan",
-        description: "Aplikasi POS mobile cross-platform terintegrasi backend Laravel untuk bisnis cuci mobil.",
+        title: "Mobile POS System for Car Wash",
+        description: "Mengembangkan aplikasi POS mobile lintas platform yang terintegrasi penuh dengan backend Laravel untuk analitik penjualan.",
         icon: "fas fa-car-side",
         color: "teal",
-        tags: ["Flutter", "REST API"]
+        tags: ["Flutter & Dart", "Laravel REST API", "MySQL", "Cross-Platform Mobile"]
     },
     {
-        title: "Aplikasi POS Mobile F&B",
-        description: "Aplikasi kasir digital dengan manajemen state Provider dan sinkronisasi real-time.",
+        title: "Full-Stack F&B POS & Web Admin",
+        description: "Membangun aplikasi POS mobile dan dashboard web admin untuk manajemen inventory, dilengkapi autentikasi Firebase.",
         icon: "fas fa-utensils",
         color: "blue",
-        tags: ["Flutter", "Firebase"]
+        tags: ["Flutter", "Laravel", "Firebase Auth", "Google Sign-In", "MySQL"]
     },
     {
-        title: "E-Commerce Barang Konsinyasi",
-        description: "Aplikasi e-commerce full-stack untuk penjualan dan pengelolaan barang second-hand.",
+        title: "Consignment E-Commerce Platform",
+        description: "Platform e-commerce full-stack khusus penjualan barang konsinyasi dengan arsitektur backend Laravel dan frontend React.",
         icon: "fas fa-store",
         color: "purple",
-        tags: ["Laravel", "React.js"]
+        tags: ["React.js", "TypeScript", "Laravel", "E-Commerce Architecture"]
+    },
+    {
+        title: "Real-Time Inventory Management",
+        description: "Aplikasi web sistem inventaris untuk pencatatan stok real-time dengan skema database relasional terstruktur.",
+        icon: "fas fa-boxes",
+        color: "orange",
+        tags: ["Laravel", "Relational SQL", "RESTful APIs", "Database Optimization"]
     }
 ];
 

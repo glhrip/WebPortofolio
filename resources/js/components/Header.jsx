@@ -20,7 +20,10 @@ const Header = () => {
                     <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-3 tracking-tight">
                         Galih Rizky <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">Pradana</span>
                     </h1>
-                    <p className="text-slate-400 text-lg sm:text-xl font-medium tracking-wide">IT Professional & Developer</p>
+                    <p className="text-slate-400 text-lg sm:text-xl font-medium tracking-wide">Full-Stack & Mobile Developer | Informatics Engineer</p>
+                    <p className="text-slate-300 text-sm leading-relaxed mt-4 bg-slate-900/30 p-4 rounded-xl border border-slate-800/50">
+                        Dedicated Full-Stack Developer dan lulusan S1 Informatika Universitas Atma Jaya Yogyakarta dengan keahlian kuat dalam membangun aplikasi web yang scalable menggunakan Laravel, React.js, dan TypeScript. Berpengalaman merancang arsitektur basis data relasional yang robust serta RESTful APIs untuk mendukung solusi bisnis end-to-end. Dilengkapi kemampuan pengembangan aplikasi mobile lintas platform (Flutter), kepemimpinan organisasi, serta pengalaman praktis IT Support.
+                    </p>
                 </motion.div>
                 
                 <motion.div 

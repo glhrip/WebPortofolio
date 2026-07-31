@@ -33,23 +33,11 @@ const ExperienceTimeline = () => {
                         className="relative pl-10 group/item transition-transform"
                     >
                         <div className="absolute left-0 top-1.5 w-6 h-6 rounded-full bg-slate-950 border-[3px] border-teal-500 z-10 shadow-[0_0_10px_rgba(45,212,191,0.4)] group-hover/item:scale-110 transition-transform"></div>
-                        <h3 className="text-white font-semibold text-lg">S1 Informatika</h3>
+                        <h3 className="text-white font-semibold text-lg">S1 Teknik Informatika</h3>
                         <p className="text-teal-400 text-sm mb-2">Universitas Atma Jaya Yogyakarta, Yogyakarta</p>
-                        <p className="text-slate-400 text-sm mb-3 leading-relaxed">Mata Kuliah Relevan: Rekayasa Perangkat Lunak, Pengembangan Web, Desain Basis Data Relasional, Desain RESTful API, dan Teknik Jaringan.</p>
+                        <p className="text-slate-400 text-sm mb-3 leading-relaxed">Mata Kuliah Relevan: Rekayasa Perangkat Lunak, Pemrograman Web, Desain Basis Data Relasional, Desain RESTful API, & Rekayasa Jaringan.</p>
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-900/80 text-xs font-medium rounded-full border border-slate-700 text-slate-300">
-                            <i className="far fa-calendar-alt text-slate-500"></i> Jul 2022 - Menunggu Wisuda
-                        </span>
-                    </motion.div>
-                    
-                    <motion.div 
-                        whileHover={{ scale: 1.02 }}
-                        className="relative pl-10 group/item transition-transform"
-                    >
-                        <div className="absolute left-0 top-1.5 w-6 h-6 rounded-full bg-slate-950 border-[3px] border-slate-600 z-10 group-hover/item:border-teal-500/50 group-hover/item:scale-110 transition-all"></div>
-                        <h3 className="text-white font-semibold text-lg">SMA</h3>
-                        <p className="text-slate-400 text-sm mb-3">SMA Muhammadiyah 1 Klaten, Klaten</p>
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-900/80 text-xs font-medium rounded-full border border-slate-700 text-slate-400">
-                            <i className="far fa-calendar-alt text-slate-500"></i> Jul 2019 - Mei 2022
+                            <i className="far fa-calendar-alt text-slate-500"></i> Agustus 2022 - Agustus 2026
                         </span>
                     </motion.div>
                 </div>
