@@ -27,9 +27,10 @@ const Portfolio = () => {
                     {/* Right Column */}
                     <div className="lg:col-span-7 space-y-8">
                         <SkillsGrid />
-                        <ProjectsGallery />
                     </div>
                 </div>
+                
+                <ProjectsGallery />
 
                 {/* Footer */}
                 <motion.footer 

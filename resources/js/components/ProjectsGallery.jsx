@@ -103,22 +103,22 @@ const ProjectsGallery = () => {
                 <h2 className="text-xl font-bold text-white tracking-wide">Project</h2>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
                 {projects.map((project, idx) => {
                     const theme = colorMaps[project.color];
-                    const isLastOdd = idx === projects.length - 1 && projects.length % 2 !== 0;
+                    const isWideCard = idx === 4; // 5th item spans 2 columns
                     return (
                         <motion.div 
                             key={idx}
                             whileHover={{ y: -4 }}
-                            className={`group/card bg-slate-900/40 hover:bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50 ${theme.borderHover} ${theme.shadow} transition-all duration-300 cursor-pointer flex flex-col h-full ${isLastOdd ? 'sm:col-span-2 sm:flex-row sm:items-start sm:gap-5' : ''}`}
+                            className={`group/card bg-slate-900/40 hover:bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50 ${theme.borderHover} ${theme.shadow} transition-all duration-300 cursor-pointer flex flex-col h-full ${isWideCard ? 'md:col-span-2 lg:col-span-2 md:flex-row md:items-start md:gap-5' : ''}`}
                         >
-                            <div className={`w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br ${theme.iconContainer} flex items-center justify-center mb-3 ${isLastOdd ? 'sm:mb-0 sm:mt-0.5' : ''} group-hover/card:scale-110 ${idx % 2 === 0 ? 'group-hover/card:rotate-3' : 'group-hover/card:-rotate-3'} transition-transform duration-300`}>
+                            <div className={`w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br ${theme.iconContainer} flex items-center justify-center mb-3 ${isWideCard ? 'md:mb-0 md:mt-0.5' : ''} group-hover/card:scale-110 ${idx % 2 === 0 ? 'group-hover/card:rotate-3' : 'group-hover/card:-rotate-3'} transition-transform duration-300`}>
                                 <i className={`${project.icon} text-base`}></i>
                             </div>
                             <div className={`flex flex-col flex-1 h-full`}>
                                 <h3 className={`text-white font-semibold text-base leading-tight ${theme.titleHover} transition-colors`}>{project.title}</h3>
-                                <p className={`text-slate-400 text-[13px] text-justify mt-2 mb-3 flex-1 ${isLastOdd ? 'sm:max-w-2xl' : ''}`}>{project.description}</p>
+                                <p className={`text-slate-400 text-[13px] text-justify mt-2 mb-3 flex-1 ${isWideCard ? 'md:max-w-2xl' : ''}`}>{project.description}</p>
                                 <div className="flex flex-wrap gap-1.5 mt-auto">
                                     {project.tags.map(tag => (
                                         <span key={tag} className={`text-[11px] font-medium ${theme.tagText} ${theme.tagBg} px-2 py-1 rounded-md border ${theme.tagBorder}`}>
