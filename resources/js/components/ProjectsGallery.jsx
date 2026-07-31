@@ -118,7 +118,7 @@ const ProjectsGallery = () => {
                             </div>
                             <div className={`flex flex-col flex-1 h-full`}>
                                 <h3 className={`text-white font-semibold text-base leading-tight ${theme.titleHover} transition-colors`}>{project.title}</h3>
-                                <p className={`text-slate-400 text-[13px] mt-2 mb-3 flex-1 ${isLastOdd ? 'sm:max-w-2xl' : ''}`}>{project.description}</p>
+                                <p className={`text-slate-400 text-[13px] text-justify mt-2 mb-3 flex-1 ${isLastOdd ? 'sm:max-w-2xl' : ''}`}>{project.description}</p>
                                 <div className="flex flex-wrap gap-1.5 mt-auto">
                                     {project.tags.map(tag => (
                                         <span key={tag} className={`text-[11px] font-medium ${theme.tagText} ${theme.tagBg} px-2 py-1 rounded-md border ${theme.tagBorder}`}>
