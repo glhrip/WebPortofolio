@@ -37,7 +37,7 @@ const ExperienceTimeline = () => {
                         <p className="text-teal-400 text-sm mb-2">Universitas Atma Jaya Yogyakarta, Yogyakarta</p>
                         <p className="text-slate-400 text-sm mb-3 leading-relaxed">Mata Kuliah Relevan: Rekayasa Perangkat Lunak, Pengembangan Web, Desain Basis Data Relasional, Desain RESTful API, dan Teknik Jaringan.</p>
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-900/80 text-xs font-medium rounded-full border border-slate-700 text-slate-300">
-                            <i className="far fa-calendar-alt text-slate-500"></i> Jul 2022 - Sekarang
+                            <i className="far fa-calendar-alt text-slate-500"></i> Jul 2022 - Menunggu Wisuda
                         </span>
                     </motion.div>
                     
