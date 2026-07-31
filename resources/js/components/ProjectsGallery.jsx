@@ -93,36 +93,39 @@ const ProjectsGallery = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.6 }}
-            className="glass rounded-[2rem] p-8 sm:p-10 border-t border-t-white/10 relative overflow-hidden group"
+            className="glass rounded-[2rem] p-6 sm:p-8 border-t border-t-white/10 relative overflow-hidden group"
         >
-            <div className="absolute top-0 right-0 w-40 h-40 bg-orange-500/5 rounded-bl-[120px] -z-10 group-hover:bg-orange-500/10 transition-colors duration-500"></div>
-            <div className="flex items-center gap-4 mb-8">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500/20 to-orange-500/5 flex items-center justify-center text-orange-400 border border-orange-500/20 shadow-lg shadow-orange-500/5">
-                    <i className="fas fa-laptop-code text-xl"></i>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-bl-[100px] -z-10 group-hover:bg-orange-500/10 transition-colors duration-500"></div>
+            <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500/20 to-orange-500/5 flex items-center justify-center text-orange-400 border border-orange-500/20 shadow-lg shadow-orange-500/5">
+                    <i className="fas fa-laptop-code text-lg"></i>
                 </div>
-                <h2 className="text-2xl font-bold text-white tracking-wide">Project</h2>
+                <h2 className="text-xl font-bold text-white tracking-wide">Project</h2>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {projects.map((project, idx) => {
                     const theme = colorMaps[project.color];
+                    const isLastOdd = idx === projects.length - 1 && projects.length % 2 !== 0;
                     return (
                         <motion.div 
                             key={idx}
-                            whileHover={{ y: -6 }}
-                            className={`group/card bg-slate-900/40 hover:bg-slate-800/80 p-6 rounded-2xl border border-slate-700/50 ${theme.borderHover} ${theme.shadow} transition-all duration-300 cursor-pointer flex flex-col h-full`}
+                            whileHover={{ y: -4 }}
+                            className={`group/card bg-slate-900/40 hover:bg-slate-800/80 p-5 rounded-2xl border border-slate-700/50 ${theme.borderHover} ${theme.shadow} transition-all duration-300 cursor-pointer flex flex-col h-full ${isLastOdd ? 'sm:col-span-2 sm:flex-row sm:items-start sm:gap-5' : ''}`}
                         >
-                            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${theme.iconContainer} flex items-center justify-center mb-4 group-hover/card:scale-110 ${idx % 2 === 0 ? 'group-hover/card:rotate-3' : 'group-hover/card:-rotate-3'} transition-transform duration-300`}>
-                                <i className={`${project.icon} text-lg`}></i>
+                            <div className={`w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br ${theme.iconContainer} flex items-center justify-center mb-3 ${isLastOdd ? 'sm:mb-0 sm:mt-0.5' : ''} group-hover/card:scale-110 ${idx % 2 === 0 ? 'group-hover/card:rotate-3' : 'group-hover/card:-rotate-3'} transition-transform duration-300`}>
+                                <i className={`${project.icon} text-base`}></i>
                             </div>
-                            <h3 className={`text-white font-semibold text-lg leading-tight ${theme.titleHover} transition-colors`}>{project.title}</h3>
-                            <p className="text-slate-400 text-sm mt-3 flex-1 mb-4">{project.description}</p>
-                            <div className="flex flex-wrap gap-2 mt-auto">
-                                {project.tags.map(tag => (
-                                    <span key={tag} className={`text-xs font-medium ${theme.tagText} ${theme.tagBg} px-2.5 py-1 rounded-md border ${theme.tagBorder}`}>
-                                        {tag}
-                                    </span>
-                                ))}
+                            <div className={`flex flex-col flex-1 h-full`}>
+                                <h3 className={`text-white font-semibold text-base leading-tight ${theme.titleHover} transition-colors`}>{project.title}</h3>
+                                <p className={`text-slate-400 text-[13px] mt-2 mb-3 flex-1 ${isLastOdd ? 'sm:max-w-2xl' : ''}`}>{project.description}</p>
+                                <div className="flex flex-wrap gap-1.5 mt-auto">
+                                    {project.tags.map(tag => (
+                                        <span key={tag} className={`text-[11px] font-medium ${theme.tagText} ${theme.tagBg} px-2 py-1 rounded-md border ${theme.tagBorder}`}>
+                                            {tag}
+                                        </span>
+                                    ))}
+                                </div>
                             </div>
                         </motion.div>
                     )
