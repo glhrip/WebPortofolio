@@ -154,21 +154,22 @@ const PixelPortfolioExplorer = () => {
             type: 'folder',
             children: {
                 about: { name: 'About Me', type: 'file', icon: '👤' },
+                summary: { name: 'Professional Summary', type: 'file', icon: '📋' },
                 projects: {
                     name: 'Projects',
                     type: 'folder',
                     icon: '📁',
                     children: {
-                        project1: { name: 'Project 1: Hajj & Umrah Management', type: 'file', icon: '📄' },
-                        project2: { name: 'Project 2: Car Wash Mobile POS', type: 'file', icon: '📄' },
-                        project3: { name: 'Project 3: Consignment E-Commerce', type: 'file', icon: '📄' },
-                        project4: { name: 'Project 4: Inventory System', type: 'file', icon: '📄' },
-                        project5: { name: 'Project 5: Booking Platform', type: 'file', icon: '📄' },
+                        project1: { name: 'Hajj & Umrah Travel Management', type: 'file', icon: '📄' },
+                        project2: { name: 'Mobile POS System - Car Wash', type: 'file', icon: '📄' },
+                        project3: { name: 'F&B POS System & Web Admin', type: 'file', icon: '📄' },
+                        project4: { name: 'Consignment E-Commerce Platform', type: 'file', icon: '📄' },
+                        project5: { name: 'Inventory Management Web App', type: 'file', icon: '📄' },
                     }
                 },
-                pendidikan: { name: 'Pendidikan', type: 'file', icon: '🎓' },
-                pengalaman: { name: 'Pengalaman', type: 'file', icon: '💼' },
-                keahlian: { name: 'Keahlian Teknis', type: 'file', icon: '⚙️' },
+                pendidikan: { name: 'Education', type: 'file', icon: '🎓' },
+                pengalaman: { name: 'Experience', type: 'file', icon: '💼' },
+                keahlian: { name: 'Technical Skills', type: 'file', icon: '⚙️' },
                 contact: { name: 'Contact', type: 'file', icon: '✉️' },
             }
         }
@@ -178,138 +179,195 @@ const PixelPortfolioExplorer = () => {
     const fileContents = {
         about: {
             title: 'About Me',
-            content: `Halo! Saya adalah Galih Rizky Pradana, seorang full-stack developer passionate yang berbasis di Klaten, Jawa Tengah. Saya memiliki pengalaman dalam membangun website, aplikasi mobile, dan sistem custom yang membantu bisnis berkembang pesat.
+            content: `Galih Rizky Pradana
+📍 Klaten, Central Java, Indonesia
+📱 +6281328562495
+📧 galihrizky829@gmail.com
+🔗 linkedin.com/in/galihrizkyp
+🐙 github.com/glhrip
 
-Saya percaya bahwa development adalah seni yang menggabungkan kreativitas dengan teknologi. Setiap project yang saya tangani dikerjakan dengan dedikasi penuh dan attention to detail.
+Full-Stack Developer | Recent Informatics Graduate
+Passionate about building scalable web applications and solving complex business problems through technology.`
+        },
+        summary: {
+            title: 'Professional Summary',
+            content: `Dedicated Full-Stack Developer and recent Informatics graduate with strong expertise in building scalable web applications using Laravel, React, and TypeScript.
 
-Keahlian saya mencakup modern web development, mobile app development, dan custom business systems yang scalable dan maintainable.`
+Experienced in designing robust relational databases and RESTful APIs to support end-to-end business solutions, including e-commerce platforms and inventory management systems.
+
+Complemented by cross-platform mobile development skills (Flutter), organizational leadership experience, and practical IT support expertise, ensuring smooth technical workflows and collaborative problem-solving.`
         },
         project1: {
-            title: 'Project 1: Hajj & Umrah Management',
-            category: 'Custom Web Dashboard',
-            description: 'Sistem manajemen perjalanan ibadah dengan fitur booking, tracking, dan reporting real-time.',
-            technologies: ['Laravel', 'React', 'MySQL', 'Google Maps API'],
-            features: ['User Dashboard', 'Admin Panel', 'Real-time Tracking', 'Payment Integration', 'Reporting System']
+            title: 'Hajj & Umrah Travel Management System',
+            technologies: ['React.js', 'Laravel', 'MySQL', 'Bootstrap', 'JWT/Sanctum'],
+            features: [
+                'Comprehensive full-stack web application for travel agencies',
+                'Automated payment tracking system',
+                'Pilgrim profile & document management',
+                'Departure scheduling module',
+                'Role-Based Access Control (RBAC)',
+                'Real-time operational dashboards',
+                'Single Page Application (SPA) architecture'
+            ]
         },
         project2: {
-            title: 'Project 2: Car Wash Mobile POS',
-            category: 'Mobile App Development',
-            description: 'Aplikasi POS untuk car wash dengan inventory management dan customer loyalty program.',
-            technologies: ['React Native', 'Node.js', 'Firebase', 'Stripe'],
-            features: ['Point of Sale', 'Inventory Tracking', 'Customer Management', 'Sales Reports', 'Offline Mode']
+            title: 'Mobile Point of Sale (POS) System - Car Wash',
+            technologies: ['Flutter', 'Dart', 'Laravel', 'MySQL', 'REST API'],
+            features: [
+                'Cross-platform mobile POS application',
+                'Dynamic service catalogs',
+                'Customer membership tier management',
+                'Real-time sales reporting analytics',
+                'Scalable RESTful APIs',
+                'Seamless data synchronization',
+                'Replaced manual bookkeeping with digital interface'
+            ]
         },
         project3: {
-            title: 'Project 3: Consignment E-Commerce',
-            category: 'Full-Stack Web App',
-            description: 'Platform e-commerce untuk sistem konsinyasi dengan commission tracking otomatis.',
-            technologies: ['Next.js', 'PostgreSQL', 'Stripe', 'AWS'],
-            features: ['Product Listing', 'Commission Tracking', 'Seller Dashboard', 'Analytics', 'Automated Payouts']
+            title: 'Full-Stack F&B POS System & Web Admin',
+            technologies: ['Flutter', 'Laravel', 'MySQL', 'REST API', 'Firebase Auth', 'Google Sign-In'],
+            features: [
+                'Cross-platform mobile POS application',
+                'Comprehensive web-based admin dashboard',
+                'Product catalog management',
+                'Real-time sales monitoring',
+                'Business report generation',
+                'Secure user authentication',
+                'Staff access control'
+            ]
         },
         project4: {
-            title: 'Project 4: Inventory System',
-            category: 'Enterprise System',
-            description: 'Sistem manajemen inventory komprehensif untuk retail dan wholesale.',
-            technologies: ['Laravel', 'Vue.js', 'PostgreSQL', 'Redis'],
-            features: ['Stock Management', 'Multi-warehouse', 'Barcode Scanning', 'Reporting', 'API Integration']
+            title: 'Consignment E-Commerce Platform',
+            technologies: ['Laravel', 'React', 'JavaScript', 'TypeScript', 'Database Design'],
+            features: [
+                'Full-stack e-commerce application',
+                'Second-hand goods marketplace',
+                'Robust backend architecture',
+                'Dynamic, interactive user interfaces',
+                'Consignment tracking system',
+                'Seller dashboard',
+                'Commission management'
+            ]
         },
         project5: {
-            title: 'Project 5: Booking Platform',
-            category: 'Full-Stack Web App',
-            description: 'Platform booking multi-layanan dengan calendar dan payment processing.',
-            technologies: ['React', 'Node.js', 'MongoDB', 'Stripe'],
-            features: ['Service Booking', 'Calendar Integration', 'Payment Gateway', 'Notifications', 'Review System']
+            title: 'Inventory Management Web Application',
+            technologies: ['Laravel', 'MySQL', 'RESTful APIs', 'SQL', 'Database Schema'],
+            features: [
+                'Real-time inventory recording & tracking',
+                'Relational database with foreign keys',
+                'Comprehensive data integrity checks',
+                'Goods & transaction management',
+                'Advanced reporting',
+                'API integration',
+                'Multi-warehouse support'
+            ]
         },
         pendidikan: {
-            title: 'Pendidikan',
-            content: `📚 RIWAYAT PENDIDIKAN:
+            title: 'Education',
+            content: `🎓 UNIVERSITAS ATMA JAYA YOGYAKARTA
+Bachelor's Degree in Informatics
+August 2022 – August 2026
+Status: Passed final academic evaluation (Yudisium); awaiting formal graduation
 
-🎓 S1 TEKNIK INFORMATIKA
-   Universitas Atma Jaya Yogyakarta
-   (2022-2026)
+📚 RELEVANT COURSEWORK:
+> Software Engineering
+> Web Development
+> Relational Database Design
+> RESTful API Design
+> Network Engineering
 
-📖 SERTIFIKASI:
-   > Google Cloud Associate
-   > AWS Solutions Architect
-   > Certified React Developer
-   > Laravel Expert Certification
-
-💻 SELF-LEARNING:
-   > Advanced JavaScript
-   > Modern Web Architecture
-   > Mobile Development
-   > Cloud Infrastructure`
+💻 KEY LEARNING AREAS:
+> Full-Stack Web Development
+> Database Architecture
+> API Design & Implementation
+> Mobile Development
+> System Design`
         },
         pengalaman: {
-            title: 'Pengalaman Kerja',
-            content: `💼 PENGALAMAN PROFESIONAL:
+            title: 'Professional & Organizational Experience',
+            content: `💼 IT SUPPORT INTERN
+Hotel Khas Malioboro Yogyakarta
+December 2025 - February 2026
 
-🚀 FREELANCE FULL-STACK DEVELOPER
-   (2021 - Sekarang)
-   > 30+ projects
-   > Client satisfaction: 4.9/5
-   > Specializing custom systems
+RESPONSIBILITIES:
+> Configured and deployed Android TV systems across guest rooms
+> Conducted regular maintenance and troubleshooting of UPS units
+> Set up, configured, and maintained LAN/WLAN networks
+> Provided daily technical support for hardware/software issues
+> Ensured operational efficiency for hotel management
 
-💻 JUNIOR DEVELOPER
-   PT XYZ (2021-2022)
-   > 5+ web applications
-   > Team collaboration
-   > Code reviews
+🤝 OPERATIONAL COORDINATOR
+KOPMA UAJY (Koperasi Mahasiswa)
+July 2024 – May 2025
 
-🌐 INTERNSHIP
-   Digital Agency ABC (2020-2021)
-   > React development
-   > UI/UX implementation
+RESPONSIBILITIES:
+> Coordinated day-to-day operational activities
+> Oversaw organizational programs and initiatives
+> Collaborated with cross-functional teams
+> Planned and organized cooperative operations
+> Contributed to improved efficiency and member engagement
 
-🎯 ACHIEVEMENTS:
-   > 50+ successful projects
-   > 100k+ active users
-   > 60% performance boost
-   > Mentored 10+ junior devs`
+🎯 KEY SKILLS DEMONSTRATED:
+> Technical troubleshooting
+> Team coordination
+> Project management
+> Problem-solving
+> Leadership & collaboration`
         },
         keahlian: {
-            title: 'Keahlian Teknis',
+            title: 'Technical Skills',
             skills: [
                 {
-                    category: 'FRONTEND',
-                    items: ['React', 'Vue.js', 'Next.js', 'Tailwind CSS', 'TypeScript']
+                    category: 'WEB TECHNOLOGIES & FRAMEWORKS',
+                    items: ['Laravel', 'React.js', 'RESTful APIs', 'Vite', 'JWT/Sanctum', 'Bootstrap']
                 },
                 {
-                    category: 'BACKEND',
-                    items: ['Node.js', 'Laravel', 'Express.js', 'Python', 'REST API']
+                    category: 'PROGRAMMING LANGUAGES',
+                    items: ['JavaScript', 'TypeScript', 'PHP', 'SQL', 'T-SQL', 'Dart', 'C/C++']
                 },
                 {
-                    category: 'DATABASE',
-                    items: ['MySQL', 'PostgreSQL', 'MongoDB', 'Firebase', 'Redis']
+                    category: 'MOBILE DEVELOPMENT',
+                    items: ['Flutter', 'Dart', 'Cross-Platform Apps', 'Firebase']
                 },
                 {
-                    category: 'MOBILE',
-                    items: ['React Native', 'Flutter', 'Expo', 'Dart']
+                    category: 'DATABASES',
+                    items: ['Relational Database Design', 'MySQL', 'SQL Server', 'Firebase', 'Schema Design']
                 },
                 {
-                    category: 'DEVOPS',
-                    items: ['Docker', 'AWS', 'Google Cloud', 'CI/CD', 'Linux']
+                    category: 'TOOLS & INFRASTRUCTURE',
+                    items: ['Git/GitHub', 'Docker', 'Linux', 'VPS Deployment', 'Nginx/Apache', 'Postman', 'Composer', 'npm']
                 },
                 {
-                    category: 'TOOLS',
-                    items: ['Git', 'Figma', 'Postman', 'Webpack', 'Agile']
+                    category: 'CONCEPTS & METHODOLOGIES',
+                    items: ['Full-Stack Development', 'IT Support', 'Technical Documentation', 'Team Coordination', 'RBAC']
                 }
             ]
         },
         contact: {
-            title: 'Contact Me',
-            content: `📧 EMAIL: galihrizky829@gmail.com
-📱 WHATSAPP: +62 812-3456-7890
-🔗 LINKEDIN: linkedin.com/in/galihrizkyp
-🐙 GITHUB: github.com/glhrip
-🌐 WEBSITE: galihdev.cloud
+            title: 'Contact & Connect',
+            content: `📧 EMAIL
+galihrizky829@gmail.com
+
+📱 WHATSAPP
++6281328562495
+
+🔗 LINKEDIN
+linkedin.com/in/galihrizkyp
+
+🐙 GITHUB
+github.com/glhrip
+
+📍 LOCATION
+Klaten, Central Java, Indonesia
 
 AVAILABLE FOR:
-✓ Freelance projects
 ✓ Full-time opportunities
+✓ Freelance projects
 ✓ Consulting & mentoring
+✓ Contract-based work
 ✓ Partnership & collaboration
 
-Mari kita ciptakan sesuatu yang amazing!`
+Let's build something amazing together!`
         }
     };
 
@@ -431,11 +489,6 @@ Mari kita ciptakan sesuatu yang amazing!`
                         style={{ letterSpacing: '0.1em' }}>
                         <GlitchText>▸ {content.title}</GlitchText>
                     </h1>
-                    {content.category && (
-                        <p className={`text-xs mt-1 ${darkMode ? 'text-lime-200/70' : 'text-blue-700/70'}`}>
-                            [{content.category}]
-                        </p>
-                    )}
                 </div>
 
                 {content.content && (
@@ -446,12 +499,6 @@ Mari kita ciptakan sesuatu yang amazing!`
                     }`}
                         style={{ fontFamily: "'Courier New', monospace" }}>
                         {content.content}
-                    </div>
-                )}
-
-                {content.description && (
-                    <div className={`border-2 p-3 ${darkMode ? 'border-purple-400 bg-purple-400/5 text-purple-200' : 'border-purple-600 bg-purple-50 text-purple-900'}`}>
-                        <p className="text-xs">{content.description}</p>
                     </div>
                 )}
 
@@ -485,19 +532,19 @@ Mari kita ciptakan sesuatu yang amazing!`
                     <div className={`border-2 p-3 ${darkMode ? 'border-pink-400 bg-pink-400/5' : 'border-pink-600 bg-pink-50'}`}>
                         <h3 className={`font-bold text-xs mb-2 ${darkMode ? 'text-pink-300' : 'text-pink-900'}`}
                             style={{ letterSpacing: '0.1em' }}>
-                            [FEATURES]
+                            [FEATURES & HIGHLIGHTS]
                         </h3>
                         <ul className="space-y-1">
                             {content.features.map((feature, idx) => (
                                 <motion.li 
                                     key={idx} 
-                                    className="flex items-center gap-2 text-xs"
+                                    className="flex items-start gap-2 text-xs"
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: idx * 0.1 }}
+                                    transition={{ delay: idx * 0.05 }}
                                 >
-                                    <span className={darkMode ? 'text-pink-400' : 'text-pink-600'}>▸</span>
-                                    {feature}
+                                    <span className={`flex-shrink-0 ${darkMode ? 'text-pink-400' : 'text-pink-600'}`}>▸</span>
+                                    <span>{feature}</span>
                                 </motion.li>
                             ))}
                         </ul>
@@ -559,7 +606,7 @@ Mari kita ciptakan sesuatu yang amazing!`
                 style={{ boxShadow: '3px 3px 0px rgba(0,0,0,0.5)' }}>
                 <h1 className={`text-lg font-black ${darkMode ? 'text-lime-400' : 'text-blue-900'}`}
                     style={{ letterSpacing: '0.15em' }}>
-                    <BouncingIcon icon="▓▒░ PORTFOLIO.EXE ░▒▓" />
+                    <BouncingIcon icon="▓▒░ GALIH.PORTFOLIO ░▒▓" />
                 </h1>
                 <button
                     onClick={() => setDarkMode(!darkMode)}
@@ -672,17 +719,17 @@ Mari kita ciptakan sesuatu yang amazing!`
                                 <h2 className={`text-lg font-black mb-4 ${darkMode ? 'text-lime-300' : 'text-blue-800'}`}
                                     style={{ letterSpacing: '0.15em' }}>
                                     <TypingAnimation 
-                                        text="WELCOME TO MY PORTFOLIO SYSTEM" 
+                                        text="GALIH RIZKY PRADANA" 
                                         speed={80}
                                     />
                                 </h2>
                                 <p className={`text-xs ${darkMode ? 'text-lime-200/70' : 'text-blue-700/70'}`}
                                     style={{ letterSpacing: '0.05em' }}>
-                                    [ READY TO EXPLORE MY PROJECTS & EXPERIENCE ]
+                                    [ FULL-STACK DEVELOPER | INFORMATICS GRADUATE ]
                                 </p>
                                 <p className={`text-xs mt-4 ${darkMode ? 'text-lime-400/50' : 'text-blue-900/50'}`}
                                     style={{ letterSpacing: '0.05em' }}>
-                                    Click a file in the explorer to get started
+                                    Click a file in the explorer to explore my portfolio
                                 </p>
                             </div>
                         </motion.div>
@@ -707,7 +754,7 @@ Mari kita ciptakan sesuatu yang amazing!`
                     animate={{ opacity: [1, 0.5, 1] }}
                     transition={{ duration: 1, repeat: Infinity }}
                 >
-                    ▸ PORTFOLIO.EXE ▪ {new Date().toLocaleTimeString()} ▪ READY █
+                    ▸ GALIH.PORTFOLIO ▪ {new Date().toLocaleTimeString()} ▪ READY █
                 </motion.span>
             </div>
         </div>
