@@ -3,6 +3,9 @@
 # Pastikan script berhenti jika ada perintah yang gagal
 set -e
 
+# Jika deploy gagal di tengah jalan, aplikasi otomatis dikeluarkan dari maintenance mode
+trap 'php artisan up' EXIT
+
 echo "================================================="
 echo "Memulai proses deployment..."
 echo "================================================="
@@ -24,8 +27,10 @@ echo "4. Menjalankan migrasi database..."
 php artisan migrate --force
 
 # Menginstall dependensi Node.js & mem-build aset frontend
+# --no-audit --no-fund supaya cepat; npm ci memakai package-lock.json persis
+# sehingga VPS tidak pernah mengubah lockfile lagi (deploy selalu bersih)
 echo "5. Mem-build aset frontend (React/Vite)..."
-npm install
+npm ci --no-audit --no-fund
 npm run build
 
 # Menghapus cache lama dan membuat cache baru untuk performa
