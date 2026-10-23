@@ -326,3 +326,53 @@ Screenshot & JSON audit (headless Chrome 1440x900 / 1023 / 390):
 Preview desain pen.dev: `/tmp/penprev.png` (433x1200)
 Build lokal yang dipakai untuk audit: `public/build/assets/app-DdwJ3yII.js` + `app-sQMo9UvY.css`
 (hash beda dari produksi — bukti produksi belum ter-update).
+
+---
+
+## Status setelah perbaikan (commit `6769a61`, sudah di-push ke `origin/main`)
+
+Semua temuan P0 dikerjakan dengan SPA IDE tetap utuh. Hasil verifikasi ulang
+(headless Chrome via CDP, halaman dijalankan dari server Laravel sungguhan
+lewat `php artisan serve` di container `php:8.3-cli-alpine`, port 8898):
+
+| Yang diukur | Sebelum | Sesudah |
+|---|---|---|
+| Kontras gagal, dark, 9 view | 0 (ok) | **0** |
+| Kontras gagal, light, 9 view | 5 panel gelap + 1.19:1…4.15:1 | **0** |
+| Panel yang masih gelap di light | 5 dari 9 | **0 dari 9** |
+| Placeholder di bawah 4.6:1 | 4 (3.26:1) | **0** |
+| Jumlah `<h1>` | 0 | **1 per view** |
+| Focus ring light | 1.07:1 (tak terlihat) | `#1e40af` di `#f5efdf` = **6.8:1** |
+| Drawer: role/aria-modal | null | `dialog` / `true` |
+| Drawer: Tab keluar ke belakang | ya (6x Tab → tombol CV) | **tidak** (trap aktif, fokus balik ke tombol menu saat Esc) |
+| Input cari: fokus saat mengetik | hilang tiap karakter | **bertahan** (Sidebar dipindah ke module scope) |
+| Overflow horizontal 390/1023/1440 | 0 | **0** |
+| Console error | 0 | **0** |
+| `og-image.png` / `favicon.svg` / `favicon-32.png` | 404 (untracked) | **200**, ter-commit |
+| `favicon.ico` | 200 tapi 0 byte | **200**, 2334 byte |
+| Header HSTS / Referrer-Policy / Permissions-Policy / COOP | tidak ada | **ada** (middleware `SecurityHeaders`) |
+| `Cache-Control` aset ber-hash `/build/*` | tidak ada | `public, max-age=31536000, immutable` |
+| `Cache-Control` HTML | default | `no-cache, must-revalidate` |
+
+Catatan penting:
+
+- **gzip belum aktif.** Itu urusan Nginx di VPS, bukan aplikasi. Middleware tidak
+  bisa mengompres; tambahkan `gzip on;` + `gzip_types` di vhost. Bundle JS 405 KB
+  → ~130 KB, CSS 49 KB → ~9 KB.
+- **`php` tidak ada di mesin WSL ini**, jadi verifikasi server memakai container
+  Docker. Sintaks PHP diverifikasi dengan `php -l` (nol error) dan header
+  diverifikasi dengan `curl -I` terhadap Laravel yang benar-benar berjalan.
+- **Deploy tetap manual di VPS** karena tidak ada kredensial SSH di mesin ini.
+  Di direktori aplikasi pada VPS:
+
+  ```
+  ./deploy.sh
+  ```
+
+  Script sudah memakai `npm ci` dan `trap 'php artisan up' EXIT`. Setelah selesai,
+  cek: `curl -sI https://portofolio.galihdev.cloud/ | grep -i strict-transport`
+  dan pastikan `/og-image.png` mengembalikan 200.
+
+Artefak verifikasi: `verify2/` dan `verify_laravel/` (screenshot + `verify.json`),
+`probe_contrast.json` di direktori scratch yang sama.
+
