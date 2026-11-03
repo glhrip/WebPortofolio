@@ -36,14 +36,49 @@
 }
 
 @layer utilities {
-    /* Terminal-flavoured custom scrollbar */
-    .scroll-term::-webkit-scrollbar { width: 10px; height: 10px; }
-    .scroll-term::-webkit-scrollbar-track { background: #0f172a; }
-    .scroll-term::-webkit-scrollbar-thumb {
-        background: #3f6212;
-        border: 2px solid #0f172a;
+    /* Fixed app frame: header/sidebar/footer stay put, only the content pane scrolls.
+       100vh is the fallback for browsers without dynamic viewport units. */
+    .app-frame {
+        height: 100vh;
     }
-    .scroll-term::-webkit-scrollbar-thumb:hover { background: #65a30d; }
+    @supports (height: 100dvh) {
+        .app-frame {
+            height: 100dvh;
+        }
+    }
+
+    /* Scroll-pane hygiene for the app's two scroll containers (content + sidebar).
+       - overflow-x: hidden — `overflow-y: auto` on its own makes the computed
+         overflow-x `auto` (a `visible` axis becomes `auto` next to a scrollable
+         one), so a 1px overflow anywhere shows a horizontal bar. That bar eats
+         vertical space, which can re-trigger the vertical bar, which eats width
+         and re-triggers the horizontal one: the two scrollbars then flicker and
+         fight each other, worst at the very bottom of a page.
+       - scrollbar-gutter: stable — reserve the bar's width up front so content
+         never jumps sideways when a scrollbar appears or disappears.
+       - overscroll-behavior: contain — stop wheel/trackpad chaining to the page
+         behind once the pane hits its end. */
+    .scroll-pane {
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-gutter: stable;
+    }
+
+    /* Terminal-flavoured custom scrollbar.
+       Colours are variables so the same utility works in both themes:
+       the app shell sets --scroll-* per mode. */
+    .scroll-term {
+        scrollbar-color: var(--scroll-thumb, #3f6212) var(--scroll-track, #0f172a);
+        scrollbar-width: thin;
+    }
+    .scroll-term::-webkit-scrollbar { width: 10px; height: 10px; }
+    .scroll-term::-webkit-scrollbar-track { background: var(--scroll-track, #0f172a); }
+    .scroll-term::-webkit-scrollbar-thumb {
+        background: var(--scroll-thumb, #3f6212);
+        border: 2px solid var(--scroll-track, #0f172a);
+    }
+    .scroll-term::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover, #65a30d); }
 
     /* Soft neon glow for accented panels */
     .glow-lime { box-shadow: 0 0 0 1px rgba(190,242,100,.25), 0 0 24px -6px rgba(190,242,100,.35); }
@@ -55,4 +90,135 @@
     /* Subtle entrance for grid items */
     @keyframes term-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .rise { animation: term-rise .4s ease both; }
+
+    /* --- Motion layer -------------------------------------------------------
+       Small, slow, low-amplitude effects. Everything is decorative, so all of
+       it is disabled under prefers-reduced-motion (see the base block). */
+
+    /* Slow vertical drift for the CRT scanline overlay.
+       The travel distance is a whole multiple of the 3px stripe period set inline
+       on the overlay, so the loop is seamless; using transform keeps it composited
+       instead of repainting the full-screen layer every frame. */
+    @keyframes term-drift { from { transform: translateY(0); } to { transform: translateY(-30px); } }
+    .scanline-drift {
+        background-repeat: repeat;
+        animation: term-drift 12s linear infinite;
+    }
+
+    /* Ring that expands and fades behind the "available" status dot. */
+    @keyframes term-ping {
+        0% { transform: scale(1); opacity: .55; }
+        70%, 100% { transform: scale(2.6); opacity: 0; }
+    }
+    .ping-ring { animation: term-ping 2.4s cubic-bezier(0, 0, .2, 1) infinite; }
+
+    /* Light sweep across a card on hover. The parent needs `group` + relative. */
+    .sheen::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: linear-gradient(105deg, transparent 35%, var(--sheen-color, rgba(255,255,255,.16)) 50%, transparent 65%);
+        transform: translateX(-120%);
+        transition: transform .75s cubic-bezier(.22, .61, .36, 1);
+    }
+    .group:hover .sheen::after,
+    .group:focus-visible .sheen::after { transform: translateX(120%); }
+
+    /* Underline that draws in from the left for inline text links. */
+    .draw-underline {
+        background-image: linear-gradient(currentColor, currentColor);
+        background-position: 0 100%;
+        background-repeat: no-repeat;
+        background-size: 0% 1px;
+        transition: background-size .3s ease;
+    }
+    .draw-underline:hover,
+    .draw-underline:focus-visible { background-size: 100% 1px; }
+
+    /* Ambient drifting gradient orbs behind the app frame (constant motion) */
+    @keyframes orb-float-a {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        33% { transform: translate(45px, -35px) scale(1.12); }
+        66% { transform: translate(-30px, 30px) scale(0.92); }
+    }
+    @keyframes orb-float-b {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        33% { transform: translate(-40px, 35px) scale(1.08); }
+        66% { transform: translate(35px, -25px) scale(0.9); }
+    }
+    .orb { animation: orb-float-a 19s ease-in-out infinite; will-change: transform; }
+    .orb-b { animation: orb-float-b 24s ease-in-out infinite; will-change: transform; }
+
+    /* Animated gradient sweep for the hero headline */
+    @keyframes gradient-pan {
+        0% { background-position: 0% 50%; }
+        100% { background-position: 200% 50%; }
+    }
+    .shimmer-text {
+        background-image: linear-gradient(110deg,
+            var(--shimmer-from, #bef264) 0%,
+            var(--shimmer-from, #bef264) 38%,
+            var(--shimmer-to, #f7fee7) 50%,
+            var(--shimmer-from, #bef264) 62%,
+            var(--shimmer-from, #bef264) 100%);
+        background-size: 200% auto;
+        animation: gradient-pan 5s linear infinite;
+    }
+
+    /* Horizontal marquee ticker (pauses on hover) */
+    @keyframes marquee {
+        from { transform: translateX(0); }
+        to { transform: translateX(-50%); }
+    }
+    .marquee-track {
+        display: inline-flex;
+        white-space: nowrap;
+        animation: marquee 30s linear infinite;
+        will-change: transform;
+    }
+    .marquee-track:hover { animation-play-state: paused; }
+
+    /* Gentle bob for the featured panel */
+    @keyframes gentle-bob {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
+    }
+    .bob { animation: gentle-bob 5.5s ease-in-out infinite; }
+
+    /* --- Compact mobile landscape optimizations (screens <= 520px height) --- */
+    @media (orientation: landscape) and (max-height: 520px) {
+        .landscape-compact-header {
+            min-height: 3rem !important;
+            padding-top: 0.25rem !important;
+            padding-bottom: 0.25rem !important;
+        }
+        .landscape-hide-breadcrumb {
+            display: none !important;
+        }
+        .landscape-compact-hero {
+            padding: 0.75rem !important;
+        }
+        .landscape-compact-title {
+            font-size: 1.25rem !important;
+            line-height: 1.25 !important;
+            margin-top: 0.35rem !important;
+        }
+        .landscape-compact-bio {
+            margin-top: 0.35rem !important;
+            font-size: 0.75rem !important;
+            line-height: 1.35 !important;
+        }
+        .landscape-compact-cta {
+            margin-top: 0.5rem !important;
+        }
+        .landscape-compact-links {
+            margin-top: 0.5rem !important;
+        }
+        .landscape-compact-footer {
+            padding-top: 0.25rem !important;
+            padding-bottom: 0.25rem !important;
+            font-size: 9px !important;
+        }
+    }
 }

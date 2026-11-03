@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, MotionConfig, motion, useInView, useReducedMotion, useScroll, useSpring } from 'framer-motion';
 import {
-    ArrowUpRight, BriefcaseBusiness, Check, ChevronRight, Code2, Compass, Copy, Download,
+    ArrowUpRight, BriefcaseBusiness, ChevronRight, Code2, Compass, Download,
     ExternalLink, FileCode2, FolderOpen, GraduationCap, Link, Mail, Menu, Moon, Search,
     Server, Sun, Terminal, UserRound, Wrench, X
 } from 'lucide-react';
@@ -194,7 +194,9 @@ const palette = (dark) => ({
     divider: dark ? 'divide-slate-700' : 'divide-stone-300',
     border: dark ? 'border-slate-700' : 'border-stone-300',
     navIdle: dark ? 'border-transparent text-slate-100 hover:border-slate-600' : 'border-transparent text-stone-800 hover:border-stone-400',
-    navActive: dark ? 'border-lime-300 bg-lime-300/15 text-lime-100' : 'border-[#1e40af] bg-[#dbeafe] text-[#1e3a8a]',
+    navActive: dark ? 'border-lime-300 text-lime-100' : 'border-[#1e40af] text-[#1e3a8a]',
+    // Background lives on the sliding element (NavRow) so it can animate between rows.
+    navHighlight: dark ? 'bg-lime-300/15' : 'bg-[#dbeafe]',
     input: dark
         ? 'border-lime-300 bg-slate-800 text-lime-100 placeholder:text-lime-200/80 focus:bg-slate-700'
         : 'border-[#1e40af] bg-white text-[#1e3a8a] placeholder:text-stone-600 focus:bg-[#dbeafe]',
@@ -320,11 +322,308 @@ const slideNav = { initial: { x: -304 }, animate: { x: 0 }, exit: { x: -304 } };
 const stagger = { animate: { transition: { staggerChildren: 0.07 } } };
 const riseItem = { initial: { opacity: 0, y: 14 }, animate: { opacity: 1, y: 0 } };
 
+// Shared easing: a short, decisive ease-out. Anything slower reads as decorative
+// rather than responsive on a page a recruiter scrolls once.
+const easeOut = [0.22, 0.61, 0.36, 1];
+
+// Sections fade up as they enter the content pane. `once` keeps it from
+// re-firing on every scroll pass, which would feel twitchy.
+const revealSection = {
+    initial: { opacity: 0, y: 18 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true, amount: 0.15 },
+    transition: { duration: 0.45, ease: easeOut },
+};
+
+// Typewriter eyebrow: the caret is a separate span so it can blink on its own.
+function Typewriter({ text, className = '', caretClass = '', speed = 34 }) {
+    const reduced = useReducedMotion();
+    const [shown, setShown] = useState(reduced ? text.length : 0);
+
+    useEffect(() => {
+        if (reduced) { setShown(text.length); return; }
+        setShown(0);
+        let i = 0;
+        const id = setInterval(() => {
+            i += 1;
+            setShown(i);
+            if (i >= text.length) clearInterval(id);
+        }, speed);
+        return () => clearInterval(id);
+    }, [text, speed, reduced]);
+
+    return <span className={className}>
+        <span className="sr-only">{text}</span>
+        <span aria-hidden="true">{text.slice(0, shown)}</span>
+        {!reduced && <span className={`caret-blink ${caretClass}`} aria-hidden="true">▌</span>}
+    </span>;
+}
+
+// Counts 0 -> value once, when the strip scrolls into view.
+function CountUp({ value, className = '' }) {
+    const reduced = useReducedMotion();
+    const numeric = /^\d+$/.test(value);
+    const ref = useRef(null);
+    const inView = useInView(ref, { once: true, amount: 0.6 });
+    const [n, setN] = useState(0);
+
+    useEffect(() => {
+        if (!numeric || reduced || !inView) return;
+        const target = Number(value);
+        const dur = 900;
+        const t0 = performance.now();
+        let raf = 0;
+        const tick = (t) => {
+            const p = Math.min(1, (t - t0) / dur);
+            // ease-out so the number settles instead of stopping dead
+            setN(Math.round(target * (1 - Math.pow(1 - p, 3))));
+            if (p < 1) raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+    }, [inView, numeric, reduced, value]);
+
+    if (!numeric) return <span className={className}>{value}</span>;
+
+    // Reduced motion shows the final number immediately; otherwise the count
+    // starts only once the strip is on screen.
+    const display = reduced ? value : String(n).padStart(value.length, '0');
+    return <span ref={ref} className={className}>{display}</span>;
+}
+
 function ActionLink({ href, children, primary = false, icon: Icon = ExternalLink, T }) {
     return <a href={href} target={href.startsWith('mailto:') ? undefined : '_blank'} rel="noreferrer"
         className={`group inline-flex min-h-11 items-center justify-center gap-2 border-2 px-4 py-2 text-xs font-black tracking-wider transition-all duration-200 hover:-translate-y-0.5 ${primary ? T.cta : T.ctaGhost}`}>
         <Icon size={15} aria-hidden="true" className="transition-transform duration-200 group-hover:scale-110" />{children}
     </a>;
+}
+
+// Magnetic button: the element leans toward the cursor while it's hovering, then
+// springs back when the pointer leaves. Disabled under reduced motion.
+// Renders an <a> when `href` is present, otherwise a <button>.
+function MagneticButton({ children, className = '', strength = 0.28, href, ...rest }) {
+    const reduced = useReducedMotion();
+    const ref = useRef(null);
+    const x = useSpring(0, { stiffness: 320, damping: 18, mass: 0.4 });
+    const y = useSpring(0, { stiffness: 320, damping: 18, mass: 0.4 });
+
+    const onMove = (e) => {
+        if (reduced || !ref.current) return;
+        const r = ref.current.getBoundingClientRect();
+        x.set((e.clientX - (r.left + r.width / 2)) * strength);
+        y.set((e.clientY - (r.top + r.height / 2)) * strength);
+    };
+    const onLeave = () => { x.set(0); y.set(0); };
+
+    const shared = {
+        ref, onMouseMove: onMove, onMouseLeave: onLeave,
+        style: { x: reduced ? 0 : x, y: reduced ? 0 : y },
+        className,
+        ...rest,
+    };
+
+    return href
+        ? <motion.a href={href} {...shared}>{children}</motion.a>
+        : <motion.button type="button" {...shared}>{children}</motion.button>;
+}
+
+// Horizontal skill ticker. The track is duplicated so the marquee loops seamlessly.
+function TechMarquee({ dark }) {
+    const T = palette(dark);
+    const skills = content.skills.groups.flatMap(([, s]) => s);
+    const row = [...skills, ...skills];
+    const dot = dark ? 'text-lime-300' : 'text-[#1e40af]';
+    return (
+        <div className={`overflow-hidden border-2 ${T.card}`} aria-hidden="true">
+            <div className="marquee-track py-2.5">
+                {row.map((s, i) => (
+                    <span key={`${s}-${i}`} className="inline-flex items-center gap-2 px-4 text-xs font-black tracking-wider">
+                        <span className={dot} aria-hidden="true">▸</span>
+                        <span className={T.strong}>{s}</span>
+                    </span>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// 3D tilt wrapper: tilts the card toward the cursor using rotateX/rotateY.
+// Springs back to flat on leave. Disabled under reduced motion.
+function TiltCard({ children, className = '', max = 6 }) {
+    const reduced = useReducedMotion();
+    const ref = useRef(null);
+    const rx = useSpring(0, { stiffness: 260, damping: 18, mass: 0.5 });
+    const ry = useSpring(0, { stiffness: 260, damping: 18, mass: 0.5 });
+
+    const onMove = (e) => {
+        if (reduced || !ref.current) return;
+        const r = ref.current.getBoundingClientRect();
+        const px = (e.clientX - r.left) / r.width - 0.5;
+        const py = (e.clientY - r.top) / r.height - 0.5;
+        rx.set(-py * max);
+        ry.set(px * max);
+    };
+    const onLeave = () => { rx.set(0); ry.set(0); };
+
+    return (
+        <motion.div ref={ref} onMouseMove={onMove} onMouseLeave={onLeave}
+            style={{ rotateX: reduced ? 0 : rx, rotateY: reduced ? 0 : ry, transformPerspective: 800 }}
+            className={className}>
+            {children}
+        </motion.div>
+    );
+}
+
+// Interactive Project Card with Cyberpunk Tech-Stack Popup HUD on Hover
+function ProjectCard({ project, dark, open, isFeatured = false }) {
+    const [hovered, setHovered] = useState(false);
+    const a = ac(project.accent, dark);
+    const T = palette(dark);
+    const initials = project.label.replace(/[^A-Za-z& ]/g, '').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+
+    return (
+        <TiltCard className={isFeatured ? "col-span-1 sm:col-span-2 h-full" : "col-span-1 h-full"}>
+            <div
+                role="button"
+                tabIndex={0}
+                onClick={() => open(`project:${project.id}`)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(`project:${project.id}`); } }}
+                onMouseEnter={() => setHovered(true)}
+                onMouseLeave={() => setHovered(false)}
+                className={`group relative flex flex-col justify-between h-full overflow-hidden border-2 p-5 text-left transition-colors duration-200 cursor-pointer ${a.border} ${dark ? 'bg-slate-900/80 hover:bg-slate-900' : 'bg-white hover:bg-[#fdf9ec]'} ${isFeatured ? 'min-h-[200px]' : 'min-h-[230px]'}`}
+            >
+                {/* Accent top gradient stripe */}
+                <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${a.glowFrom} to-transparent`} aria-hidden="true" />
+                <span className="sheen" aria-hidden="true" />
+
+                {/* Base Card Content (Clean & perfectly aligned across all cards) */}
+                <div className="flex-1">
+                    {/* Header Row */}
+                    <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                            <div className={`grid h-10 w-10 shrink-0 place-items-center border-2 text-xs font-black ${a.border} ${a.text} ${a.bgSoft}`} aria-hidden="true">
+                                {initials}
+                            </div>
+                            <div>
+                                <p className={`text-[10px] font-black tracking-[0.16em] ${a.text}`}>
+                                    {project.domain.toUpperCase()} · {project.year}
+                                </p>
+                                {isFeatured && (
+                                    <span className={`inline-block text-[9px] font-black tracking-widest ${dark ? 'text-lime-300' : 'text-[#1e40af]'}`}>
+                                        // FLAGSHIP_SYSTEM
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        {project.live ? (
+                            <span className={`inline-flex items-center gap-1.5 border px-2 py-0.5 text-[10px] font-black tracking-wider ${dark ? 'border-lime-300/60 text-lime-200 bg-lime-300/10' : 'border-[#4d7c0f] text-[#3f6212] bg-lime-100/50'}`}>
+                                <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
+                                LIVE
+                            </span>
+                        ) : (
+                            <span className={`border px-2 py-0.5 text-[10px] font-bold tracking-wider ${T.soft} ${T.border}`}>
+                                DELIVERED
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Title & Subtitle with locked heights for visual symmetry */}
+                    <div className="mt-4">
+                        <h3 className={`text-base font-black tracking-wide ${T.strong}`}>
+                            {project.label}
+                        </h3>
+                        <p className={`mt-2 text-xs leading-5 ${T.soft} line-clamp-2`}>
+                            {project.subtitle}
+                        </p>
+                        {/* Tech stack chips visible directly for mobile and immediate scanning */}
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                            {project.stack.slice(0, 4).map((tech) => (
+                                <span key={tech} className={`border px-1.5 py-0.5 text-[10px] font-bold ${a.chip}`}>
+                                    {tech}
+                                </span>
+                            ))}
+                            {project.stack.length > 4 && (
+                                <span className={`px-1 py-0.5 text-[10px] font-bold ${T.soft}`}>
+                                    +{project.stack.length - 4}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer Row (Identical across all cards) */}
+                <div className={`mt-5 pt-3 border-t border-dashed flex items-center justify-between ${T.border}`}>
+                    <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${T.soft} transition-colors group-hover:${a.text}`}>
+                        <Code2 size={13} className={a.text} />
+                        <span>{project.stack.length} Techs</span>
+                        <span className="hidden sm:inline text-[10px] opacity-60">(Hover to inspect)</span>
+                    </span>
+                    <span className={`inline-flex items-center gap-1 text-xs font-black tracking-wider transition-transform duration-200 group-hover:translate-x-1 ${a.text}`}>
+                        OPEN <ChevronRight size={14} />
+                    </span>
+                </div>
+
+                {/* Cyberpunk Tech Stack Popup HUD (smooth scale + fade on hover) */}
+                <AnimatePresence>
+                    {hovered && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 6 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 6 }}
+                            transition={{ duration: 0.18, ease: [0.22, 0.61, 0.36, 1] }}
+                            className={`absolute inset-0 z-20 flex flex-col justify-between p-5 border-2 ${a.border} backdrop-blur-xl shadow-2xl`}
+                            style={{
+                                background: dark ? 'rgba(3, 7, 18, 0.95)' : 'rgba(253, 249, 236, 0.97)'
+                            }}
+                            aria-hidden="true"
+                        >
+                            <div>
+                                <div className={`flex items-center justify-between pb-2 border-b-2 ${a.border}`}>
+                                    <span className={`text-[11px] font-black tracking-widest ${a.text}`}>
+                                        // TECH_STACK_INSPECTOR
+                                    </span>
+                                    <span className={`text-[10px] font-bold ${T.soft}`}>
+                                        {project.stack.length} MODULES
+                                    </span>
+                                </div>
+
+                                <div className="mt-3.5 flex flex-wrap gap-2">
+                                    {project.stack.map((tech, idx) => (
+                                        <motion.span
+                                            key={tech}
+                                            initial={{ opacity: 0, scale: 0.6, y: 8 }}
+                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                            transition={{ delay: 0.02 + idx * 0.035, type: 'spring', stiffness: 500, damping: 22 }}
+                                            className={`border px-2.5 py-1 text-xs font-black tracking-wide ${a.chip}`}
+                                        >
+                                            {tech}
+                                        </motion.span>
+                                    ))}
+                                </div>
+
+                                {project.spec && project.spec[0] && (
+                                    <div className="mt-4 flex items-center gap-2 text-[11px]">
+                                        <span className={`font-black tracking-wider ${T.soft}`}>{project.spec[0][0].toUpperCase()}:</span>
+                                        <span className={`font-bold ${T.muted}`}>{project.spec[0][1]}</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className={`pt-3 border-t-2 ${a.border} flex items-center justify-between text-xs`}>
+                                <span className={`text-[10px] font-bold tracking-wider ${T.soft}`}>
+                                    CLICK TO VIEW FULL CASE STUDY
+                                </span>
+                                <span className={`inline-flex items-center gap-1 font-black ${a.text}`}>
+                                    EXPLORE <ChevronRight size={14} />
+                                </span>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+        </TiltCard>
+    );
 }
 
 function SectionLabel({ icon: Icon, children, right, T }) {
@@ -338,10 +637,17 @@ function SectionLabel({ icon: Icon, children, right, T }) {
 
 // Module scope matters: a component declared inside the render body gets a new identity
 // on every render, so React remounts the subtree and the search input loses focus.
-function NavRow({ active, T, children, ...rest }) {
+// `scope` keeps the sliding highlight unique per sidebar instance (desktop vs drawer) —
+// two mounted elements sharing one layoutId would fight over the same layout animation.
+function NavRow({ active, T, scope = 'desktop', children, ...rest }) {
     return <button type="button" aria-current={active ? 'page' : undefined}
-        className={`flex w-full items-center gap-2 border-2 px-3 py-2 text-left text-xs font-bold transition-colors ${active ? T.navActive : T.navIdle}`}
-        {...rest}>{children}</button>;
+        className={`relative flex w-full items-center gap-2 border-2 px-3 py-2 text-left text-xs font-bold transition-colors ${active ? T.navActive : T.navIdle}`}
+        {...rest}>
+        {active && <motion.span layoutId={`nav-active-${scope}`} aria-hidden="true"
+            className={`absolute inset-[2px] ${T.navHighlight}`}
+            transition={{ type: 'spring', stiffness: 420, damping: 34, mass: 0.7 }} />}
+        <span className="relative flex w-full items-center gap-2">{children}</span>
+    </button>;
 }
 
 function ProjectBanner({ project, dark }) {
@@ -504,67 +810,10 @@ function StatsStrip({ dark }) {
     ];
     return <section className={`grid grid-cols-2 border-2 sm:grid-cols-4 ${T.card}`} aria-label="At a glance">
         {stats.map((s, i) => <div key={s.label} className={`p-4 ${edges[i]}`}>
-            <p className={`text-2xl font-black tracking-tight sm:text-3xl ${T.strong}`}>{s.key}</p>
+            <CountUp value={s.key} className={`block text-2xl font-black tracking-tight sm:text-3xl ${T.strong}`} />
             <p className={`mt-1 text-[10px] font-black tracking-[0.14em] ${T.soft}`}>{s.label}</p>
         </div>)}
     </section>;
-}
-
-function ContactForm({ dark }) {
-    const T = palette(dark);
-    const [form, setForm] = useState({ name: '', email: '', message: '' });
-    const [copied, setCopied] = useState(false);
-    const valid = Boolean(form.name.trim() && form.message.trim());
-
-    const submit = (e) => {
-        e.preventDefault();
-        if (!valid) return;
-        const body = `${form.message.trim()}\n\n— ${form.name.trim()}${form.email.trim() ? ` (${form.email.trim()})` : ''}`;
-        const subject = `Portfolio enquiry — ${form.name.trim() || 'new message'}`;
-        window.location.href = `mailto:${CONTACT.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    };
-
-    const copy = async () => {
-        try {
-            await navigator.clipboard.writeText(CONTACT.email);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1800);
-        } catch {
-            setCopied(false);
-        }
-    };
-
-    return <form onSubmit={submit} className={`border-2 ${T.card} p-4`} aria-labelledby="contact-form-heading">
-        <h3 id="contact-form-heading" className={`text-xs font-black tracking-widest ${T.accentSoft}`}>SEND A MESSAGE</h3>
-        <div className="mt-3 space-y-3">
-            <label className="block">
-                <span className={`text-[11px] font-black tracking-wider ${T.soft}`}>NAME</span>
-                <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required autoComplete="name"
-                    className={`mt-1 w-full border-2 px-3 py-2 text-sm font-bold outline-none ${T.input}`} placeholder="Your name" />
-            </label>
-            <label className="block">
-                <span className={`text-[11px] font-black tracking-wider ${T.soft}`}>EMAIL</span>
-                <input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} autoComplete="email"
-                    className={`mt-1 w-full border-2 px-3 py-2 text-sm font-bold outline-none ${T.input}`} placeholder="you@example.com" />
-            </label>
-            <label className="block">
-                <span className={`text-[11px] font-black tracking-wider ${T.soft}`}>MESSAGE</span>
-                <textarea value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} required rows={4}
-                    className={`mt-1 w-full resize-y border-2 px-3 py-2 text-sm font-bold outline-none ${T.input}`} placeholder="What needs to keep running?" />
-            </label>
-        </div>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-            <button type="submit" disabled={!valid}
-                className={`inline-flex min-h-11 items-center gap-2 border-2 px-4 py-2 text-xs font-black tracking-wider transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 ${T.cta}`}>
-                <Mail size={15} aria-hidden="true" />OPEN IN MAIL APP
-            </button>
-            <button type="button" onClick={copy}
-                className={`inline-flex min-h-11 items-center gap-2 border-2 px-3 py-2 text-xs font-black tracking-wider transition-colors ${T.ctaGhost}`}>
-                {copied ? <Check size={15} aria-hidden="true" /> : <Copy size={15} aria-hidden="true" />}{copied ? 'COPIED' : 'COPY EMAIL'}
-            </button>
-        </div>
-        <p className={`mt-3 text-[11px] font-bold leading-5 ${T.soft}`}>This form composes a mail draft locally — nothing is sent to a server, so your message never sits in a database I own.</p>
-    </form>;
 }
 
 function HomeView({ open, dark }) {
@@ -574,23 +823,31 @@ function HomeView({ open, dark }) {
         <div className="grid gap-6 lg:grid-cols-[1.2fr_.8fr]">
             <motion.section
                 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-                className={`relative overflow-hidden border-4 p-5 sm:p-8 ${T.hero} ${T.shadow}`}>
+                className={`relative overflow-hidden border-4 p-5 sm:p-8 landscape-compact-hero ${T.hero} ${T.shadow}`}>
                 <div className={`pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full blur-3xl ${dark ? 'bg-lime-300/10' : 'bg-[#1e40af]/10'}`} aria-hidden="true" />
                 <p className={`relative inline-flex items-center gap-2 text-xs font-black tracking-[0.16em] ${T.accentSoft}`}>
-                    <span className={`h-2 w-2 animate-pulse rounded-full ${dark ? 'bg-lime-300' : 'bg-[#1e40af]'}`} aria-hidden="true" />
-                    // AVAILABLE FOR IT ENGINEER &amp; FULL-STACK ROLES
+                    <span className="relative grid h-2 w-2 place-items-center" aria-hidden="true">
+                        <span className={`absolute inset-0 rounded-full ${dark ? 'bg-lime-300' : 'bg-[#1e40af]'} ping-ring`} />
+                        <span className={`h-2 w-2 rounded-full ${dark ? 'bg-lime-300' : 'bg-[#1e40af]'}`} />
+                    </span>
+                    <Typewriter text="// AVAILABLE FOR IT ENGINEER & FULL-STACK ROLES" caretClass="ml-0.5" />
                 </p>
-                <h1 className={`relative mt-5 max-w-3xl text-3xl font-black leading-tight tracking-wide sm:text-5xl ${T.strong}`}>I BUILD SYSTEMS THAT KEEP OPERATIONS MOVING.</h1>
-                <p className={`relative mt-5 max-w-2xl text-sm leading-7 sm:text-base ${T.muted}`}>Galih Rizky Pradana. Informatics graduate building Laravel and React applications, practical REST APIs, and deployment-ready systems for real business workflows.</p>
-                <div className="relative mt-7 flex flex-wrap gap-3">
-                    <button type="button" onClick={() => open('project:umrah')} className={`group inline-flex min-h-11 items-center gap-2 border-2 px-4 py-2 text-xs font-black tracking-wider transition-all duration-200 hover:-translate-y-0.5 ${T.cta}`}>
-                        <FolderOpen size={15} className="transition-transform duration-200 group-hover:scale-110" aria-hidden="true" />VIEW FEATURED PROJECT
-                    </button>
-                    <a href="/Galih_Rizky_IT_Engineer.pdf" className={`group inline-flex min-h-11 items-center gap-2 border-2 px-4 py-2 text-xs font-black tracking-wider transition-all duration-200 hover:-translate-y-0.5 ${T.ctaGhost}`}>
-                        <Download size={15} className="transition-transform duration-200 group-hover:translate-y-0.5" aria-hidden="true" />DOWNLOAD CV
-                    </a>
+                <h1 className={`relative mt-5 max-w-3xl text-3xl font-black leading-tight tracking-wide sm:text-5xl landscape-compact-title ${T.strong}`}>
+                    <span className="shimmer-text bg-clip-text text-transparent"
+                        style={{ '--shimmer-from': dark ? '#bef264' : '#1e40af', '--shimmer-to': dark ? '#f7fee7' : '#60a5fa' }}>
+                        I BUILD SYSTEMS THAT KEEP OPERATIONS MOVING.
+                    </span>
+                </h1>
+                <p className={`relative mt-5 max-w-2xl text-sm leading-7 sm:text-base landscape-compact-bio ${T.muted}`}>Galih Rizky Pradana. Informatics graduate building Laravel and React applications, practical REST APIs, and deployment-ready systems for real business workflows.</p>
+                <div className="relative mt-7 flex flex-wrap gap-3 landscape-compact-cta">
+                    <MagneticButton type="button" onClick={() => open('project:umrah')} className={`group inline-flex min-h-11 items-center gap-2 border-2 px-4 py-2 text-xs font-black tracking-wider transition-colors ${T.cta}`}>
+                        <FolderOpen size={15} aria-hidden="true" className="transition-transform duration-200 group-hover:scale-110" />VIEW FEATURED PROJECT
+                    </MagneticButton>
+                    <MagneticButton href="/Galih_Rizky_IT_Engineer.pdf" className={`group inline-flex min-h-11 items-center gap-2 border-2 px-4 py-2 text-xs font-black tracking-wider transition-colors ${T.ctaGhost}`}>
+                        <Download size={15} aria-hidden="true" className="transition-transform duration-200 group-hover:translate-y-0.5" />DOWNLOAD CV
+                    </MagneticButton>
                 </div>
-                <div className={`relative mt-8 flex flex-wrap gap-x-5 gap-y-3 text-xs font-bold ${T.muted}`}>
+                <div className={`relative mt-8 flex flex-wrap items-center gap-x-5 gap-y-3 text-xs font-bold landscape-compact-links ${T.muted}`}>
                     <a className={`inline-flex items-center gap-2 transition-colors ${dark ? 'hover:text-lime-200' : 'hover:text-[#1e40af]'}`} href={CONTACT.github} target="_blank" rel="noreferrer"><Code2 size={15} aria-hidden="true" />github.com/glhrip</a>
                     <a className={`inline-flex items-center gap-2 transition-colors ${dark ? 'hover:text-lime-200' : 'hover:text-[#1e40af]'}`} href={CONTACT.linkedin} target="_blank" rel="noreferrer"><Link size={15} aria-hidden="true" />LinkedIn</a>
                     <a className={`inline-flex items-center gap-2 transition-colors ${dark ? 'hover:text-lime-200' : 'hover:text-[#1e40af]'}`} href={`mailto:${CONTACT.email}`}><Mail size={15} aria-hidden="true" />Email</a>
@@ -599,7 +856,7 @@ function HomeView({ open, dark }) {
 
             <motion.aside
                 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }}
-                className={`border-2 p-5 ${T.card} ${dark ? 'border-cyan-300/70 glow-lime' : 'border-cyan-700/60'}`} aria-labelledby="featured-heading">
+                className={`bob border-2 p-5 ${T.card} ${dark ? 'border-cyan-300/70 glow-lime' : 'border-cyan-700/60'}`} aria-labelledby="featured-heading">
                 <p className={`text-xs font-black tracking-widest ${ruleTone('cyan', dark)}`}>FEATURED_PROJECT.EXE</p>
                 <h2 id="featured-heading" className={`mt-4 text-xl font-black ${T.strong}`}>{featured.label}</h2>
                 <p className={`mt-3 text-sm leading-7 ${T.muted}`}>A full-stack operating system for travel agencies: pilgrim records, document workflow, payments, departure schedules, and RBAC.</p>
@@ -618,7 +875,9 @@ function HomeView({ open, dark }) {
 
         <StatsStrip dark={dark} />
 
-        <section aria-labelledby="all-projects-heading">
+        <TechMarquee dark={dark} />
+
+        <motion.section aria-labelledby="all-projects-heading" {...revealSection}>
             <div className="mb-4 flex items-center gap-3">
                 <FolderOpen size={16} className={T.label} aria-hidden="true" />
                 <h2 id="all-projects-heading" className={`text-xs font-black tracking-[0.16em] ${T.label}`}>ALL_PROJECTS/</h2>
@@ -626,68 +885,40 @@ function HomeView({ open, dark }) {
                 <span className={`text-xs font-bold ${T.soft}`}>{projects.length} entries</span>
             </div>
             <motion.div variants={stagger} initial="initial" animate="animate" className="grid gap-4 sm:grid-cols-2">
-                {projects.map((project) => {
-                    const a = ac(project.accent, dark);
-                    const initials = project.label.replace(/[^A-Za-z& ]/g, '').split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
-                    return (
-                        <motion.button type="button" key={project.id} variants={riseItem} onClick={() => open(`project:${project.id}`)}
-                            className={`group relative overflow-hidden border-2 p-4 text-left transition-all duration-200 hover:-translate-y-1 ${a.border} ${dark ? 'bg-slate-900/75 hover:bg-slate-900' : 'bg-white hover:bg-[#fdf9ec]'}`}>
-                            <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${a.glowFrom} to-transparent`} aria-hidden="true" />
-                            <div className="flex items-start justify-between gap-3">
-                                <div className={`grid h-11 w-11 shrink-0 place-items-center border-2 text-sm font-black ${a.border} ${a.text} ${a.bgSoft}`} aria-hidden="true">{initials}</div>
-                                {project.live && <span className={`inline-flex items-center gap-1 border px-2 py-0.5 text-[10px] font-black tracking-wider ${dark ? 'border-lime-300/60 text-lime-200' : 'border-[#4d7c0f] text-[#3f6212]'}`}>● LIVE</span>}
-                            </div>
-                            <h3 className={`mt-3 text-sm font-black ${T.strong}`}>{project.label}</h3>
-                            <p className={`mt-1 text-[10px] font-black tracking-[0.14em] ${a.text}`}>{project.domain} · {project.year}</p>
-                            <p className={`mt-2 line-clamp-2 text-xs leading-5 ${T.soft}`}>{project.subtitle}</p>
-                            <div className="mt-3 flex flex-wrap gap-1.5">{project.stack.slice(0, 4).map(x => <span key={x} className={`border px-1.5 py-0.5 text-[10px] font-bold ${a.chip}`}>{x}</span>)}</div>
-                            <span className={`mt-3 inline-flex items-center gap-1 text-[11px] font-black tracking-wider transition-colors ${T.soft} ${dark ? 'group-hover:text-lime-200' : 'group-hover:text-[#1e40af]'}`}>OPEN <ChevronRight size={13} className="transition-transform duration-200 group-hover:translate-x-1" aria-hidden="true" /></span>
-                        </motion.button>
-                    );
-                })}
+                {projects.map((project, index) => (
+                    <ProjectCard
+                        key={project.id}
+                        project={project}
+                        dark={dark}
+                        open={open}
+                        isFeatured={index === 0}
+                    />
+                ))}
             </motion.div>
-        </section>
+        </motion.section>
 
-        <section aria-labelledby="approach-quote-heading">
+        <motion.section aria-labelledby="approach-quote-heading" {...revealSection}>
             <SectionLabel icon={Compass} T={T} right="APPROACH.MD">HOW I WORK</SectionLabel>
             <div className="grid gap-4 lg:grid-cols-[1.1fr_.9fr]">
                 <blockquote className={`border-2 border-l-4 p-5 ${panelRule('lime', dark)} ${T.card}`}>
                     <p id="approach-quote-heading" className={`text-base font-black leading-snug tracking-wide sm:text-lg ${T.strong}`}>&ldquo;{content.approach.quote}&rdquo;</p>
-                    <button type="button" onClick={() => open('approach')} className={`mt-4 inline-flex items-center gap-2 text-xs font-black tracking-wider ${T.accentSoft}`}>
-                        READ THE FULL APPROACH <ChevronRight size={14} aria-hidden="true" />
+                    <button type="button" onClick={() => open('approach')} className={`group mt-4 inline-flex items-center gap-2 text-xs font-black tracking-wider ${T.accentSoft}`}>
+                        READ THE FULL APPROACH <ChevronRight size={14} className="transition-transform duration-200 group-hover:translate-x-1" aria-hidden="true" />
                     </button>
                 </blockquote>
                 <div className={`border-2 p-4 ${T.card}`}>
                     <p className={`text-sm leading-7 ${T.muted}`}>{content.approach.columns[0]}</p>
                 </div>
             </div>
-        </section>
-
-        <section aria-labelledby="contact-heading">
-            <SectionLabel icon={Mail} T={T} right="CONTACT.ME">GET IN TOUCH</SectionLabel>
-            <div className={`border-4 p-5 ${dark ? 'border-lime-300 bg-slate-900/90' : 'border-[#1e40af] bg-white'}`}>
-                <div className="grid gap-5 lg:grid-cols-[1fr_.85fr]">
-                    <div>
-                        <h2 id="contact-heading" className={`text-xl font-black leading-tight sm:text-2xl ${T.strong}`}>Got a system that needs to keep running?</h2>
-                        <p className={`mt-3 text-sm leading-7 ${T.muted}`}>{content.contact.body}</p>
-                        <div className="mt-5 flex flex-wrap gap-3">
-                            <ActionLink href={`mailto:${CONTACT.email}`} primary icon={Mail} T={T}>SEND ME A MESSAGE</ActionLink>
-                            <ActionLink href={CONTACT.github} icon={Code2} T={T}>GITHUB</ActionLink>
-                            <ActionLink href={CONTACT.linkedin} icon={Link} T={T}>LINKEDIN</ActionLink>
-                        </div>
-                        <p className={`mt-3 text-[11px] font-bold ${T.soft}`}>Reply in 1–2 business days · {CONTACT.email}</p>
-                    </div>
-                    <ContactForm dark={dark} />
-                </div>
-            </div>
-        </section>
+        </motion.section>
     </div>;
 }
 
 function Sidebar({ dark, query, setQuery, selected, open, results, innerRef, inDrawer = false }) {
     const T = palette(dark);
+    const scope = inDrawer ? 'drawer' : 'desktop';
     return <aside ref={innerRef}
-        className={`h-full w-72 shrink-0 border-r-4 p-3 ${T.panel}`}
+        className={`scroll-term scroll-pane h-full w-72 shrink-0 border-r-4 p-3 ${T.panel}`}
         {...(inDrawer ? { role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Portfolio navigation menu' } : { 'aria-label': 'Portfolio navigation' })}>
         <label className="relative block">
             <span className="sr-only">Search portfolio</span>
@@ -698,21 +929,21 @@ function Sidebar({ dark, query, setQuery, selected, open, results, innerRef, inD
         <p aria-live="polite" className="sr-only">{results ? `${results.length} result${results.length === 1 ? '' : 's'}` : ''}</p>
         <nav className="mt-4 space-y-1" aria-label="Portfolio sections">
             {results ? (results.length
-                ? results.map(item => <NavRow key={item.id} T={T} active={selected === item.id} onClick={() => open(item.id)}>
+                ? results.map(item => <NavRow key={item.id} T={T} scope={scope} active={selected === item.id} onClick={() => open(item.id)}>
                     <item.icon size={15} aria-hidden="true" />{item.label}
                 </NavRow>)
                 : <div className={`border-2 border-dashed px-3 py-6 text-center text-xs font-bold ${dark ? 'border-slate-700 text-slate-400' : 'border-[#1e40af]/40 text-stone-600'}`}>No results for &ldquo;{query}&rdquo;</div>)
                 : <>
-                    <NavRow T={T} active={selected === 'home'} onClick={() => open('home')}><Terminal size={15} aria-hidden="true" />HOME</NavRow>
+                    <NavRow T={T} scope={scope} active={selected === 'home'} onClick={() => open('home')}><Terminal size={15} aria-hidden="true" />HOME</NavRow>
                     {navItems.map(item => <React.Fragment key={item.id}>
                         {item.folder ? <>
                             <div className={`mt-2 flex items-center gap-2 px-3 py-2 text-xs font-black tracking-wider ${T.label}`}><FolderOpen size={15} aria-hidden="true" />PROJECTS</div>
                             <div className={`ml-4 border-l-2 pl-2 ${dark ? 'border-lime-300/70' : 'border-[#1e40af]/60'}`}>
-                                {projects.map(project => <NavRow key={project.id} T={T} active={selected === `project:${project.id}`} onClick={() => open(`project:${project.id}`)}>
+                                {projects.map(project => <NavRow key={project.id} T={T} scope={scope} active={selected === `project:${project.id}`} onClick={() => open(`project:${project.id}`)}>
                                     <FileCode2 size={14} aria-hidden="true" />{project.label}
                                 </NavRow>)}
                             </div>
-                        </> : <NavRow T={T} active={selected === item.id} onClick={() => open(item.id)}>
+                        </> : <NavRow T={T} scope={scope} active={selected === item.id} onClick={() => open(item.id)}>
                             <item.icon size={15} aria-hidden="true" />{item.label}
                         </NavRow>}
                     </React.Fragment>)}
@@ -723,6 +954,38 @@ function Sidebar({ dark, query, setQuery, selected, open, results, innerRef, inD
             <p>Open to IT Engineer &amp; Full-Stack roles.</p>
         </div>
     </aside>;
+}
+
+// One-time terminal boot overlay. Plays once per browser session so a recruiter
+// reloading the tab mid-read isn't forced to sit through it again.
+function BootSequence({ dark }) {
+    const lines = [
+        '> GALIH.PORTFOLIO v2.6.0',
+        '> booting portfolio module...',
+        '> mounting React 19 runtime... OK',
+        '> loading project index... 5 entries',
+        '> establishing secure link... OK',
+        '> READY.',
+    ];
+
+    return (
+        <motion.div className="fixed inset-0 z-[100] grid place-items-center"
+            style={{ backgroundColor: dark ? '#020617' : '#f5efdf' }}
+            initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4, ease: easeOut }}>
+            <motion.pre className={`px-6 font-mono text-xs font-bold leading-6 sm:text-sm ${dark ? 'text-lime-300' : 'text-[#1e40af]'}`}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+                {lines.map((line, i) => (
+                    <motion.div key={i}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.1 + i * 0.18, duration: 0.25, ease: easeOut }}>
+                        {line}
+                    </motion.div>
+                ))}
+                <motion.span className="caret-blink inline-block" aria-hidden="true">█</motion.span>
+            </motion.pre>
+        </motion.div>
+    );
 }
 
 export default function PortfolioExplorer() {
@@ -737,8 +1000,17 @@ export default function PortfolioExplorer() {
     const [query, setQuery] = useState('');
     const [menuOpen, setMenuOpen] = useState(false);
     const reducedMotion = useReducedMotion();
+    const [bootDone, setBootDone] = useState(() => {
+        if (typeof sessionStorage === 'undefined') return true;
+        return sessionStorage.getItem('boot-seen') === '1';
+    });
     const drawerRef = useRef(null);
     const menuButtonRef = useRef(null);
+    const mainRef = useRef(null);
+
+    // Scroll progress for the content pane (the window itself never scrolls).
+    const { scrollYProgress } = useScroll({ container: mainRef });
+    const progress = useSpring(scrollYProgress, { stiffness: 140, damping: 26, restDelta: 0.001 });
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -748,6 +1020,22 @@ export default function PortfolioExplorer() {
         document.documentElement.style.colorScheme = darkMode ? 'dark' : 'light';
         document.documentElement.style.backgroundColor = darkMode ? '#020617' : '#f5efdf';
     }, [darkMode]);
+
+    // The content pane is the scroll container now, so reset it when the section changes;
+    // otherwise opening a new section leaves you mid-page.
+    useEffect(() => {
+        mainRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }, [selected]);
+
+    // Boot overlay: mark seen after the boot lines finish, once per session.
+    useEffect(() => {
+        if (bootDone || reducedMotion) return;
+        const t = setTimeout(() => {
+            setBootDone(true);
+            try { sessionStorage.setItem('boot-seen', '1'); } catch { /* ignore */ }
+        }, 1900);
+        return () => clearTimeout(t);
+    }, [bootDone, reducedMotion]);
 
     // Drawer: scroll lock, Esc, focus move-in, focus trap, focus restore.
     useEffect(() => {
@@ -787,44 +1075,94 @@ export default function PortfolioExplorer() {
     const T = palette(darkMode);
     const sidebarProps = { dark: darkMode, query, setQuery, selected, open, results };
 
-    return <div className={`min-h-screen ${T.shell}`}
+    return <MotionConfig reducedMotion="user">
+    <AnimatePresence>
+        {!bootDone && !reducedMotion && <BootSequence dark={darkMode} key="boot" />}
+    </AnimatePresence>
+    <div className={`app-frame flex flex-col overflow-hidden ${T.shell}`}
         style={{
             fontFamily: "'JetBrains Mono', ui-monospace, 'SF Mono', 'Courier New', monospace",
             '--focus-ring': darkMode ? '#bef264' : '#1e40af',
             '--focus-halo': darkMode ? '#020617' : '#f5efdf',
+            // Terminal scrollbar colours for both themes (see .scroll-term in app.css)
+            '--scroll-track': darkMode ? '#0f172a' : '#f5efdf',
+            '--scroll-thumb': darkMode ? '#3f6212' : '#1e40af',
+            '--scroll-thumb-hover': darkMode ? '#65a30d' : '#1d4ed8',
+            '--sheen-color': darkMode ? 'rgba(190,242,100,.10)' : 'rgba(30,64,175,.07)',
         }}>
 
-        <div className="pointer-events-none fixed inset-0 opacity-[.035]" aria-hidden="true"
-            style={{
-                backgroundImage: darkMode ? 'repeating-linear-gradient(0deg, #bef264 0, #bef264 1px, transparent 1px, transparent 3px)' : 'radial-gradient(#1e40af 1px, transparent 1px)',
-                backgroundSize: darkMode ? 'auto' : '14px 14px',
-            }} />
+        {/* CRT scanline texture. In dark mode it drifts slowly; in light mode it stays a
+            static dot grid so the page keeps its paper feel. */}
+        <div className={`pointer-events-none fixed inset-0 overflow-hidden opacity-[.035]`} aria-hidden="true">
+            <div className={darkMode ? 'scanline-drift absolute inset-x-0 top-0 h-[calc(100%+30px)]' : 'absolute inset-0'}
+                style={{
+                    backgroundImage: darkMode ? 'repeating-linear-gradient(0deg, #bef264 0, #bef264 1px, transparent 1px, transparent 3px)' : 'radial-gradient(#1e40af 1px, transparent 1px)',
+                    backgroundSize: darkMode ? 'auto' : '14px 14px',
+                }} />
+        </div>
 
-        <header className={`relative z-20 flex min-h-16 items-center justify-between border-b-4 px-4 ${T.panel}`}>
-            <a href="/" className={`text-sm font-black tracking-[0.12em] sm:text-lg ${T.accent}`}>▓▒░ GALIH.PORTFOLIO ░▒▓</a>
+        {/* Ambient floating gradient orbs — constant slow motion behind everything. */}
+        <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
+            <div className={`orb absolute -left-24 top-10 h-72 w-72 rounded-full blur-3xl ${darkMode ? 'bg-lime-500/10' : 'bg-[#1e40af]/10'}`} />
+            <div className={`orb-b absolute right-[-6rem] top-1/3 h-80 w-80 rounded-full blur-3xl ${darkMode ? 'bg-cyan-500/10' : 'bg-cyan-600/10'}`} />
+            <div className={`orb absolute bottom-0 left-1/3 h-64 w-64 rounded-full blur-3xl ${darkMode ? 'bg-violet-500/10' : 'bg-violet-700/10'}`} />
+        </div>
+
+        <a href="#portfolio-content"
+            onClick={(e) => { e.preventDefault(); mainRef.current?.focus(); }}
+            className={`sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:border-2 focus:px-3 focus:py-2 focus:text-xs focus:font-black focus:tracking-wider ${T.panel} ${T.accent}`}>
+            SKIP TO CONTENT
+        </a>
+
+        <header className={`relative z-20 flex min-h-16 shrink-0 items-center justify-between border-b-4 px-4 landscape-compact-header ${T.panel}`} style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}>
+            <a href="/" className={`text-xs font-black tracking-tight whitespace-nowrap sm:text-lg sm:tracking-[0.12em] ${T.accent}`}>▓▒░ GALIH.PORTFOLIO ░▒▓</a>
             <div className="flex items-center gap-2">
                 <a href="/Galih_Rizky_IT_Engineer.pdf" className={`hidden min-h-10 items-center gap-2 border-2 px-3 text-xs font-black sm:inline-flex ${darkMode ? 'border-slate-600 hover:border-lime-300' : 'border-stone-400 hover:border-[#1e40af]'}`}>
                     <Download size={14} aria-hidden="true" />CV
                 </a>
                 <button type="button" onClick={() => setDarkMode(!darkMode)} aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'} aria-pressed={!darkMode}
                     title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-                    className={`grid min-h-10 min-w-10 place-items-center border-2 ${darkMode ? 'border-yellow-300 text-yellow-200 hover:bg-yellow-300/10' : 'border-[#b45309] text-[#92400e] hover:bg-amber-100'}`}>
-                    {darkMode ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}
+                    className={`group grid min-h-10 min-w-10 place-items-center overflow-hidden border-2 transition-colors ${darkMode ? 'border-yellow-300 text-yellow-200 hover:bg-yellow-300/10' : 'border-[#b45309] text-[#92400e] hover:bg-amber-100'}`}>
+                    {/* The two icons swap with a small rotation instead of popping. */}
+                    <AnimatePresence mode="wait" initial={false}>
+                        <motion.span key={darkMode ? 'sun' : 'moon'} className="grid place-items-center"
+                            initial={{ opacity: 0, rotate: -70, scale: 0.6 }}
+                            animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                            exit={{ opacity: 0, rotate: 70, scale: 0.6 }}
+                            transition={{ duration: 0.25, ease: easeOut }}>
+                            {darkMode ? <Sun size={17} aria-hidden="true" /> : <Moon size={17} aria-hidden="true" />}
+                        </motion.span>
+                    </AnimatePresence>
                 </button>
                 <button type="button" ref={menuButtonRef} onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle portfolio menu" aria-expanded={menuOpen} aria-controls="portfolio-drawer"
-                    className={`grid min-h-10 min-w-10 place-items-center border-2 lg:hidden ${darkMode ? 'border-lime-300 text-lime-200' : 'border-[#1e40af] text-[#1e40af]'}`}>
-                    {menuOpen ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
+                    className={`grid min-h-10 min-w-10 place-items-center border-2 lg:hidden ${menuOpen ? 'invisible' : ''} ${darkMode ? 'border-lime-300 text-lime-200' : 'border-[#1e40af] text-[#1e40af]'}`}>
+                    <Menu size={18} aria-hidden="true" />
                 </button>
             </div>
         </header>
 
-        <div className="relative z-10 flex min-h-[calc(100vh-7.5rem)]">
-            <div className="hidden lg:block"><Sidebar {...sidebarProps} /></div>
-            <main className="min-w-0 flex-1" aria-label="Portfolio content">
-                <div className={`sticky top-0 z-10 flex items-center gap-2 border-b-2 px-4 py-3 ${T.panel}`}>
-                    <span className={`shrink-0 font-black ${T.accent}`}>C:\</span>
-                    <span className={`min-w-0 flex-1 truncate ${T.muted}`}>Portfolio\{activeLabel}</span>
-                    <span className={`shrink-0 animate-pulse ${T.accent}`} aria-hidden="true">█</span>
+        <div className="relative z-10 flex min-h-0 flex-1">
+            <div className="hidden shrink-0 lg:block"><Sidebar {...sidebarProps} /></div>
+            <main ref={mainRef} id="portfolio-content" tabIndex={-1} className="scroll-term scroll-pane min-w-0 flex-1 outline-none" aria-label="Portfolio content">
+                <div className={`sticky top-0 z-10 border-b-2 landscape-hide-breadcrumb ${T.panel}`}>
+                    <div className="flex items-center gap-2 px-4 py-3">
+                        <span className={`shrink-0 font-black ${T.accent}`}>C:\</span>
+                        <span className="min-w-0 flex-1 truncate">
+                            {/* Keyed so the breadcrumb crossfades instead of snapping when the section changes. */}
+                            <AnimatePresence mode="wait" initial={false}>
+                                <motion.span key={activeLabel} className={`inline-block ${T.muted}`}
+                                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                                    transition={{ duration: 0.18, ease: easeOut }}>
+                                    Portfolio\{activeLabel}
+                                </motion.span>
+                            </AnimatePresence>
+                        </span>
+                        <span className={`shrink-0 animate-pulse ${T.accent}`} aria-hidden="true">█</span>
+                    </div>
+                    {/* Reading progress for the content pane. */}
+                    <motion.div aria-hidden="true"
+                        className={`h-[3px] origin-left ${darkMode ? 'bg-lime-300' : 'bg-[#1e40af]'}`}
+                        style={{ scaleX: progress }} />
                 </div>
                 <div className="p-4 sm:p-6">
                     <AnimatePresence mode="wait">
@@ -846,26 +1184,28 @@ export default function PortfolioExplorer() {
             </main>
         </div>
 
-        <footer className={`relative z-20 border-t-4 px-4 py-2 text-xs font-bold tracking-wider ${T.panel}`}>
-            <span className={T.accent}>▸ GALIH.PORTFOLIO</span>
-            <span className={`mx-2 ${T.soft}`} aria-hidden="true">▪</span>
-            <span className={T.muted}>READY FOR THE NEXT BUILD</span>
+        <footer className={`relative z-20 shrink-0 border-t-4 px-4 py-2 text-[10px] sm:text-xs font-bold tracking-wider flex items-center justify-between gap-2 overflow-hidden landscape-compact-footer ${T.panel}`}
+            style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+            <span className={`truncate ${T.accent}`}>▸ GALIH.PORTFOLIO</span>
+            <span className={`hidden sm:inline ${T.soft}`} aria-hidden="true">▪</span>
+            <span className={`truncate text-right ${T.muted}`}>READY FOR THE NEXT BUILD</span>
         </footer>
 
         <AnimatePresence>{menuOpen && <React.Fragment>
             <motion.div key="backdrop" {...(reducedMotion ? {} : fade)} onClick={() => setMenuOpen(false)}
-                className="fixed inset-0 z-40 bg-black/60 lg:hidden" aria-hidden="true" />
+                className="fixed inset-0 z-40 bg-black/75 backdrop-blur-sm lg:hidden" aria-hidden="true" />
             <motion.div key="drawer" id="portfolio-drawer" {...(reducedMotion ? {} : slideNav)}
-                className={`fixed inset-y-0 left-0 z-50 w-72 overflow-y-auto border-r-4 scroll-term lg:hidden ${T.panel}`}>
-                <div className={`flex items-center justify-between border-b-2 px-3 py-2 ${T.border}`}>
+                className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col overflow-hidden border-r-4 lg:hidden ${T.panel}`}>
+                <div className={`flex shrink-0 items-center justify-between border-b-2 px-3 py-2 ${T.border}`}>
                     <span className={`font-black tracking-[0.14em] ${T.accent}`}>▓▒░ NAV ░▒▓</span>
                     <button type="button" onClick={() => setMenuOpen(false)} aria-label="Close portfolio menu" title="Close menu"
                         className={`grid min-h-9 min-w-9 place-items-center border-2 ${darkMode ? 'border-slate-600 text-slate-200 hover:border-lime-300' : 'border-stone-400 text-stone-700 hover:border-[#1e40af]'}`}>
                         <X size={16} aria-hidden="true" />
                     </button>
                 </div>
-                <div className="h-[calc(100%-3rem)]"><Sidebar {...sidebarProps} innerRef={drawerRef} inDrawer /></div>
+                <div className="min-h-0 flex-1"><Sidebar {...sidebarProps} innerRef={drawerRef} inDrawer /></div>
             </motion.div>
         </React.Fragment>}</AnimatePresence>
-    </div>;
+    </div>
+    </MotionConfig>;
 }
