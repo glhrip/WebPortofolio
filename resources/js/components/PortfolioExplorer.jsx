@@ -843,7 +843,7 @@ function HomeView({ open, dark }) {
                     <MagneticButton type="button" onClick={() => open('project:umrah')} className={`group inline-flex min-h-11 items-center gap-2 border-2 px-4 py-2 text-xs font-black tracking-wider transition-colors ${T.cta}`}>
                         <FolderOpen size={15} aria-hidden="true" className="transition-transform duration-200 group-hover:scale-110" />VIEW FEATURED PROJECT
                     </MagneticButton>
-                    <MagneticButton href="/Galih_Rizky_IT_Engineer.pdf" className={`group inline-flex min-h-11 items-center gap-2 border-2 px-4 py-2 text-xs font-black tracking-wider transition-colors ${T.ctaGhost}`}>
+                    <MagneticButton href="/CV_Galih.pdf" target="_blank" rel="noreferrer" className={`group inline-flex min-h-11 items-center gap-2 border-2 px-4 py-2 text-xs font-black tracking-wider transition-colors ${T.ctaGhost}`}>
                         <Download size={15} aria-hidden="true" className="transition-transform duration-200 group-hover:translate-y-0.5" />DOWNLOAD CV
                     </MagneticButton>
                 </div>
@@ -1117,7 +1117,7 @@ export default function PortfolioExplorer() {
         <header className={`relative z-20 flex min-h-16 shrink-0 items-center justify-between border-b-4 px-4 landscape-compact-header ${T.panel}`} style={{ paddingTop: 'max(0.5rem, env(safe-area-inset-top))' }}>
             <a href="/" className={`text-xs font-black tracking-tight whitespace-nowrap sm:text-lg sm:tracking-[0.12em] ${T.accent}`}>▓▒░ GALIH.PORTFOLIO ░▒▓</a>
             <div className="flex items-center gap-2">
-                <a href="/Galih_Rizky_IT_Engineer.pdf" className={`hidden min-h-10 items-center gap-2 border-2 px-3 text-xs font-black sm:inline-flex ${darkMode ? 'border-slate-600 hover:border-lime-300' : 'border-stone-400 hover:border-[#1e40af]'}`}>
+                <a href="/CV_Galih.pdf" target="_blank" rel="noreferrer" className={`hidden min-h-10 items-center gap-2 border-2 px-3 text-xs font-black sm:inline-flex ${darkMode ? 'border-slate-600 hover:border-lime-300' : 'border-stone-400 hover:border-[#1e40af]'}`}>
                     <Download size={14} aria-hidden="true" />CV
                 </a>
                 <button type="button" onClick={() => setDarkMode(!darkMode)} aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'} aria-pressed={!darkMode}
